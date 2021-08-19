@@ -1,0 +1,123 @@
+use('aggregations')
+
+// db.solarSystem.aggregate([
+//   {
+//     $project: {
+//       _id: 0,
+//       name: 1,
+//       gravity: 1,
+//       mass: 1,
+//       radius: 1,
+//       sma: 1,
+//     }
+//   },
+//   {
+//     $addFields: {
+//       gravity: "$gravity.value",
+//       mass: "$mass.value",
+//       radius: "$radius.value",
+//       sma: "$sma.value",
+//     }
+//   }
+// ])
+
+
+/** Lab: Using Cursor-like Stages */
+// We store our favorites in a variable for easy reference within the pipeline
+// var favorites = [
+//   "Sandra Bullock",
+//   "Tom Hanks",
+//   "Julia Roberts",
+//   "Kevin Spacey",
+//   "George Clooney"
+// ]
+
+// db.movies.aggregate([
+//   {
+//   /**
+//    * We start by matching films that include at least one of our favorites in their cast
+//    */
+//     $match: {
+//       "tomatoes.viewer.rating": { $gte: 3 },
+//       countries: "USA",
+//       cast: { $in: favorites }
+//     }
+//   },
+//   {
+//     /**
+//     * project the num_favs value by calculating the $size of the array intersection,
+//     * between the given set of favorites and the film cast
+//     */
+//     $project: {
+//       _id: 0,
+//       title: 1,
+//       "tomatoes.viewer.rating": 1,
+//       num_favs: {
+//         $size: {
+//           $setIntersection: ["$cast", favorites ]
+//         }
+//       }
+//     }
+//   },
+//   {
+//     $sort: { num_favs: -1, "tomatoes.viewer.rating": -1, title: -1 }
+//   },
+//   {
+//     $skip: 24
+//   },
+//   {
+//     $limit: 1
+//   }
+// ])
+
+
+/** Lab - Bringing it all together */
+db.movies.aggregate([
+  {
+    /**
+     * query: The query in MQL.
+     */
+    $match: {
+      languages: { $all: ["English"] },
+      "imdb.rating": { $gte: 1 },
+      "imdb.votes": { $gte: 1 },
+      year: { $gte: 1990 }
+    }    
+  },
+  {
+    /**
+     * within the $project stage we apply the scaling and normalizating calculations
+     */
+    $project: {
+      _id: 0,
+      title: 1,
+      "imdb.rating": 1,
+      "imdb.votes": 1,
+      normalized_rating: {
+        $avg: [
+          "$imdb.rating",
+          {
+            $add: [
+              1,
+              {
+                $multiply: [
+                  9,
+                  {
+                    $divide: [
+                      { $subtract: ["$imdb.votes", 5] },
+                      { $subtract: [1521105, 5] },
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  { $sort: { normalized_rating: 1 } },
+  { $limit: 5 }
+])
+
+// db.movies.find({})
