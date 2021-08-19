@@ -1,74 +1,74 @@
 use('aggregations')
 
-// db.solarSystem.aggregate([
-//   {
-//     $project: {
-//       _id: 0,
-//       name: 1,
-//       gravity: 1,
-//       mass: 1,
-//       radius: 1,
-//       sma: 1,
-//     }
-//   },
-//   {
-//     $addFields: {
-//       gravity: "$gravity.value",
-//       mass: "$mass.value",
-//       radius: "$radius.value",
-//       sma: "$sma.value",
-//     }
-//   }
-// ])
+db.solarSystem.aggregate([
+  {
+    $project: {
+      _id: 0,
+      name: 1,
+      gravity: 1,
+      mass: 1,
+      radius: 1,
+      sma: 1,
+    }
+  },
+  {
+    $addFields: {
+      gravity: "$gravity.value",
+      mass: "$mass.value",
+      radius: "$radius.value",
+      sma: "$sma.value",
+    }
+  }
+])
 
 
 /** Lab: Using Cursor-like Stages */
 // We store our favorites in a variable for easy reference within the pipeline
-// var favorites = [
-//   "Sandra Bullock",
-//   "Tom Hanks",
-//   "Julia Roberts",
-//   "Kevin Spacey",
-//   "George Clooney"
-// ]
+var favorites = [
+  "Sandra Bullock",
+  "Tom Hanks",
+  "Julia Roberts",
+  "Kevin Spacey",
+  "George Clooney"
+]
 
-// db.movies.aggregate([
-//   {
-//   /**
-//    * We start by matching films that include at least one of our favorites in their cast
-//    */
-//     $match: {
-//       "tomatoes.viewer.rating": { $gte: 3 },
-//       countries: "USA",
-//       cast: { $in: favorites }
-//     }
-//   },
-//   {
-//     /**
-//     * project the num_favs value by calculating the $size of the array intersection,
-//     * between the given set of favorites and the film cast
-//     */
-//     $project: {
-//       _id: 0,
-//       title: 1,
-//       "tomatoes.viewer.rating": 1,
-//       num_favs: {
-//         $size: {
-//           $setIntersection: ["$cast", favorites ]
-//         }
-//       }
-//     }
-//   },
-//   {
-//     $sort: { num_favs: -1, "tomatoes.viewer.rating": -1, title: -1 }
-//   },
-//   {
-//     $skip: 24
-//   },
-//   {
-//     $limit: 1
-//   }
-// ])
+db.movies.aggregate([
+  {
+  /**
+   * We start by matching films that include at least one of our favorites in their cast
+   */
+    $match: {
+      "tomatoes.viewer.rating": { $gte: 3 },
+      countries: "USA",
+      cast: { $in: favorites }
+    }
+  },
+  {
+    /**
+    * project the num_favs value by calculating the $size of the array intersection,
+    * between the given set of favorites and the film cast
+    */
+    $project: {
+      _id: 0,
+      title: 1,
+      "tomatoes.viewer.rating": 1,
+      num_favs: {
+        $size: {
+          $setIntersection: ["$cast", favorites ]
+        }
+      }
+    }
+  },
+  {
+    $sort: { num_favs: -1, "tomatoes.viewer.rating": -1, title: -1 }
+  },
+  {
+    $skip: 24
+  },
+  {
+    $limit: 1
+  }
+])
 
 
 /** Lab - Bringing it all together */
