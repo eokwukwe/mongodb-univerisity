@@ -160,46 +160,214 @@ use('aggregations')
 // ])
 
 /** Lab - Using $lookup */
-db.air_routes.aggregate([
+// db.air_routes.aggregate([
+//   {
+//     /**
+//      * filter documents where 'airplane' contains "747" or "380"
+//      */
+//     $match: {
+//       airplane: /747|380/
+//     }
+//   },
+//   {
+//     /**
+//      * match documents from air_alliances on the value of their airlines 
+//      * field against the current 'air_routes' airline.name field
+//      */
+//     $lookup: {
+//       from: 'air_alliances',
+//       localField: 'airline.name',
+//       foreignField: 'airlines',
+//       as: 'alliance'
+//     }
+//   },
+//   {
+//     /**
+//      * creating a document with each entry in alliance
+//      */
+//     $unwind: '$alliance'
+//   },
+//   {
+//     /**
+//      * group on the name of the alliance and count how many times it appeared
+//      */
+//     $group: {
+//       _id: '$alliance.name',
+//       count: { $sum: 1 }
+//     }
+//   },
+//   {
+//     /**
+//      * Sort in descending order.
+//      */
+//     $sort: { count: -1 }
+//   }
+// ])
+
+// Lookup those that reports to the reference
+// db.parent_reference.aggregate([
+//   {
+//     $match: { name: 'Eliot'}
+//   },
+//   {
+//     $graphLookup: {
+//       from: 'parent_reference',
+//       startWith: '$_id',
+//       connectFromField: '_id',
+//       connectToField: 'reports_to',
+//       as: 'all_reports'
+//     }
+//   }
+// ])
+
+// Lookup bosses (Self lookup)
+// db.parent_reference.aggregate([
+//   {
+//     $match: { name: 'Shannon'}
+//   },
+//   {
+//     $graphLookup: {
+//       from: 'parent_reference',
+//       startWith: '$reports_to',
+//       connectFromField: 'reports_to',
+//       connectToField: '_id',
+//       as: 'bosses'
+//     }
+//   }
+// ])
+
+// Reverse Schema of parent_reference (Self lookup)
+// db.child_reference.aggregate([
+//   {
+//     $match: { name: 'Dev' }
+//   },
+//   {
+//     $graphLookup: {
+//       from: 'child_reference',
+//       startWith: '$direct_reports',
+//       connectFromField: 'direct_reports',
+//       connectToField: 'name',
+//       as: 'all_reports'
+//     }
+//   }
+// ])
+
+// Specifying maxDepth (Self lookup)
+// db.child_reference.aggregate([
+//   {
+//     $match: { name: 'Dev' }
+//   },
+//   {
+//     $graphLookup: {
+//       from: 'child_reference',
+//       startWith: '$direct_reports',
+//       connectFromField: 'direct_reports',
+//       connectToField: 'name',
+//       as: 'till_2_level_reports',
+//       maxDepth: 1
+//     }
+//   }
+// ])
+
+// Specifying maxDepth and depthField (Self lookup)
+// db.child_reference.aggregate([
+//   {
+//     $match: { name: 'Dev' }
+//   },
+//   {
+//     $graphLookup: {
+//       from: 'child_reference',
+//       startWith: '$direct_reports',
+//       connectFromField: 'direct_reports',
+//       connectToField: 'name',
+//       as: 'descendants',
+//       maxDepth: 1,
+//       depthField: 'level'
+//     }
+//   }
+// ])
+
+// Lab: $graphLookup
+db.air_alliances.aggregate([
+  {
+    $match: { name: 'OneWorld' }
+  },
   {
     /**
-     * filter documents where 'airplane' contains "747" or "380"
+     * iterates, with maxDepth 0 on the air_airlines collection to collect the
+     * details on the airlines, specially their base airport, restricting the
+     * $lookup to airlines of the requested countries [Spain, Germany, Canada]
      */
-    $match: {
-      airplane: /747|380/
+    $graphLookup: {
+      from: 'air_airlines',
+      startWith: '$airlines',
+      connectFromField: 'name',
+      connectToField: 'name',
+      as: 'airlines',
+      maxDepth: 0,
+      restrictSearchWithMatch: {
+        country: { $in: ["Germany", "Spain", "Canada"] }
+      }
     }
   },
   {
     /**
-     * match documents from air_alliances on the value of their airlines 
-     * field against the current 'air_routes' airline.name field
+     * iterate over all routes up to maximum of one layover by setting the
+     * maxDepth to 1. Find all possible destinations when departing from
+     * the base airport of each carrier.
      */
-    $lookup: {
-      from: 'air_alliances',
-      localField: 'airline.name',
-      foreignField: 'airlines',
-      as: 'alliance'
+    $graphLookup: {
+      from: 'air_routes',
+      startWith: '$airlines.base',
+      connectFromField: 'dst_airport',
+      connectToField: 'src_airport',
+      as: 'connections',
+      maxDepth: 1,
     }
   },
   {
     /**
-     * creating a document with each entry in alliance
+     * We now have a document with a field named connections that is an array of
+     * all routes that are within 1 layover. Remove unnecessary information from
+     * the documents and include information about valid airlines that match our
+     * initial restriction and the name of the current airline.
      */
-    $unwind: '$alliance'
+    $project: {
+      validAirlines: "$airlines.name",
+      "connections.dst_airport": 1,
+      "connections.airline.name": 1
+    }
   },
   {
     /**
-     * group on the name of the alliance and count how many times it appeared
+     * unwind our connections array
+     */
+    $unwind: "$connections"
+  },
+  {
+    /**
+     * add a field representing whether this particular route is valid
+     * meaning it is a route flown by one of our desired carriers.
+     */
+    $project: {
+      isValid: {
+        $in: ["$connections.airline.name", "$validAirlines"]
+      },
+      "connections.dst_airport": 1,
+    }
+  },
+  {
+    /**
+     * filter out invalid routes
+     */
+    $match: { isValid: true }
+  },
+  {
+    /**
+     * then $group them on the destination
      */
     $group: {
-      _id: '$alliance.name',
-      count: { $sum: 1 }
+      _id: "$connections.dst_airport"
     }
-  },
-  {
-    /**
-     * Sort in descending order.
-     */
-    $sort: { count: -1 }
   }
 ])
