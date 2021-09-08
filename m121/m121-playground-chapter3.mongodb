@@ -1,376 +1,376 @@
 use('aggregations')
 
-// db.movies.aggregate([
-//   {
-//     /**
-//      * _id: The id of the group.
-//      * fieldN: The first field name.
-//      */
-//     $group: {
-//       _id: "$year",
-//       num_films_in_year: { $sum: 1 }
-//     }
-//   },
-//   {
-//     $sort: { num_films_in_year: -1 }
-//   }
-// ])
+db.movies.aggregate([
+  {
+    /**
+     * _id: The id of the group.
+     * fieldN: The first field name.
+     */
+    $group: {
+      _id: "$year",
+      num_films_in_year: { $sum: 1 }
+    }
+  },
+  {
+    $sort: { num_films_in_year: -1 }
+  }
+])
 
-// db.air_alliances.aggregate([
-//   {
-//     /**
-//      * from: The target collection.
-//      * localField: The local join field.
-//      * foreignField: The target join field.
-//      * as: The name for the results.
-//      * pipeline: The pipeline to run on the joined collection.
-//      * let: Optional variables to use in the pipeline field stages.
-//      */
-//     $lookup: {
-//       from: 'air_airlines',
-//       localField: 'airlines',
-//       foreignField: 'name',
-//       as: 'airlines'
-//     }
-//   }
-// ])
+db.air_alliances.aggregate([
+  {
+    /**
+     * from: The target collection.
+     * localField: The local join field.
+     * foreignField: The target join field.
+     * as: The name for the results.
+     * pipeline: The pipeline to run on the joined collection.
+     * let: Optional variables to use in the pipeline field stages.
+     */
+    $lookup: {
+      from: 'air_airlines',
+      localField: 'airlines',
+      foreignField: 'name',
+      as: 'airlines'
+    }
+  }
+])
 
-// db.movies.aggregate([
-//   {
-//     /**
-//      * query: The query in MQL.
-//      */
-//     $match: {
-//       "imdb.rating": { $gt: 0 },
-//       year: { $gte: 2010, $lte: 2015 },
-//       runtime: { $gte: 90 }
-//     }
-//   },
-//   {
-//     $unwind: "$genres"
-//   },
-//   {
-//     $group: {
-//       _id: {
-//         year: "$year",
-//         genre: "$genres"
-//       },
-//       average_rating: { $avg: "$imdb.rating" }
-//     }
-//   },
-//   {
-//     $sort: { "_id.year": -1, average_rating: -1 }
-//   },
-//   {
-//     $group: {
-//       _id: "$_id.year",
-//       genre: { $first: "$_id.genre"},
-//       average_rating: { $first: "$average_rating"}
-//     }
-//   },
-//   {
-//     $sort: { _id: -1 }
-//   }
-// ])
+db.movies.aggregate([
+  {
+    /**
+     * query: The query in MQL.
+     */
+    $match: {
+      "imdb.rating": { $gt: 0 },
+      year: { $gte: 2010, $lte: 2015 },
+      runtime: { $gte: 90 }
+    }
+  },
+  {
+    $unwind: "$genres"
+  },
+  {
+    $group: {
+      _id: {
+        year: "$year",
+        genre: "$genres"
+      },
+      average_rating: { $avg: "$imdb.rating" }
+    }
+  },
+  {
+    $sort: { "_id.year": -1, average_rating: -1 }
+  },
+  {
+    $group: {
+      _id: "$_id.year",
+      genre: { $first: "$_id.genre"},
+      average_rating: { $first: "$average_rating"}
+    }
+  },
+  {
+    $sort: { _id: -1 }
+  }
+])
 
 /** Lab - $group and Accumulators */
-// db.movies.aggregate([
-//   {
-//     /**
-//      * filtering documents for the appropriate text stating they won an Oscar
-//      */
-//     $match: {
-//       awards: /Won \d{1,2} Oscars?/
-//     }
-//   },
-//   {
-//     /**
-//      * specifications: The fields to
-//      *   include or exclude.
-//      */
-//     $group: {
-//       _id: null,
-//       highest_rating: { $max: "$imdb.rating" },
-//       lowest_rating: { $min: "$imdb.rating" },
-//       average_rating: { $avg: "$imdb.rating" },
-//       deviation: { $stdDevSamp: "$imdb.rating" },
-//     }
-//   }
-// ])
+db.movies.aggregate([
+  {
+    /**
+     * filtering documents for the appropriate text stating they won an Oscar
+     */
+    $match: {
+      awards: /Won \d{1,2} Oscars?/
+    }
+  },
+  {
+    /**
+     * specifications: The fields to
+     *   include or exclude.
+     */
+    $group: {
+      _id: null,
+      highest_rating: { $max: "$imdb.rating" },
+      lowest_rating: { $min: "$imdb.rating" },
+      average_rating: { $avg: "$imdb.rating" },
+      deviation: { $stdDevSamp: "$imdb.rating" },
+    }
+  }
+])
 
 /** Lab - $unwind */
-// db.movies.aggregate([
-//   {
-//     /**
-//      * movies that include "English" as a language
-//      */
-//     $match: {
-//       languages: "English"
-//     }
-//   },
-//   {
-//     /**
-//      * keeping only the data necessary for the aggregation 
-//      * stages that follow
-//      */
-//     $project: {
-//       _id: 0,
-//       cast: 1,
-//       "imdb.rating": 1
-//     }
-//   },
-//   {
-//     /**
-//      * extract every entry in the cast array and creating a
-//      * document for each one
-//      */
-//     $unwind: "$cast"
-//   },
-//   { /**
-//      * groups cast members together by their name, total the
-//      * number of documents, and get the average imdb.rating
-//     */
-//     $group: {
-//       _id: "$cast",
-//       numFilms: { $sum: 1 },
-//       average: { $avg: "$imdb.rating" }
-//     }
-//   },
-//   {
-//     /**
-//      * truncate the imdb.rating to one decimal. This is done by first multiplying 
-//      * by 10, truncating the number, then dividing by 10.
-//      */
-//     $project: {
-//       numFilms: 1,
-//       average: {
-//         $divide: [
-//           { $trunc: { $multiply: ["$average", 10 ] }},
-//           10
-//         ]
-//       }
-//     }
-//   },
-//   {
-//     $sort: { numFilms: -1 }
-//   },
-//   {
-//     $limit: 1
-//   }
-// ])
+db.movies.aggregate([
+  {
+    /**
+     * movies that include "English" as a language
+     */
+    $match: {
+      languages: "English"
+    }
+  },
+  {
+    /**
+     * keeping only the data necessary for the aggregation 
+     * stages that follow
+     */
+    $project: {
+      _id: 0,
+      cast: 1,
+      "imdb.rating": 1
+    }
+  },
+  {
+    /**
+     * extract every entry in the cast array and creating a
+     * document for each one
+     */
+    $unwind: "$cast"
+  },
+  { /**
+     * groups cast members together by their name, total the
+     * number of documents, and get the average imdb.rating
+    */
+    $group: {
+      _id: "$cast",
+      numFilms: { $sum: 1 },
+      average: { $avg: "$imdb.rating" }
+    }
+  },
+  {
+    /**
+     * truncate the imdb.rating to one decimal. This is done by first multiplying 
+     * by 10, truncating the number, then dividing by 10.
+     */
+    $project: {
+      numFilms: 1,
+      average: {
+        $divide: [
+          { $trunc: { $multiply: ["$average", 10 ] }},
+          10
+        ]
+      }
+    }
+  },
+  {
+    $sort: { numFilms: -1 }
+  },
+  {
+    $limit: 1
+  }
+])
 
 /** Lab - Using $lookup */
-// db.air_routes.aggregate([
-//   {
-//     /**
-//      * filter documents where 'airplane' contains "747" or "380"
-//      */
-//     $match: {
-//       airplane: /747|380/
-//     }
-//   },
-//   {
-//     /**
-//      * match documents from air_alliances on the value of their airlines 
-//      * field against the current 'air_routes' airline.name field
-//      */
-//     $lookup: {
-//       from: 'air_alliances',
-//       localField: 'airline.name',
-//       foreignField: 'airlines',
-//       as: 'alliance'
-//     }
-//   },
-//   {
-//     /**
-//      * creating a document with each entry in alliance
-//      */
-//     $unwind: '$alliance'
-//   },
-//   {
-//     /**
-//      * group on the name of the alliance and count how many times it appeared
-//      */
-//     $group: {
-//       _id: '$alliance.name',
-//       count: { $sum: 1 }
-//     }
-//   },
-//   {
-//     /**
-//      * Sort in descending order.
-//      */
-//     $sort: { count: -1 }
-//   }
-// ])
+db.air_routes.aggregate([
+  {
+    /**
+     * filter documents where 'airplane' contains "747" or "380"
+     */
+    $match: {
+      airplane: /747|380/
+    }
+  },
+  {
+    /**
+     * match documents from air_alliances on the value of their airlines 
+     * field against the current 'air_routes' airline.name field
+     */
+    $lookup: {
+      from: 'air_alliances',
+      localField: 'airline.name',
+      foreignField: 'airlines',
+      as: 'alliance'
+    }
+  },
+  {
+    /**
+     * creating a document with each entry in alliance
+     */
+    $unwind: '$alliance'
+  },
+  {
+    /**
+     * group on the name of the alliance and count how many times it appeared
+     */
+    $group: {
+      _id: '$alliance.name',
+      count: { $sum: 1 }
+    }
+  },
+  {
+    /**
+     * Sort in descending order.
+     */
+    $sort: { count: -1 }
+  }
+])
 
 // Lookup those that reports to the reference
-// db.parent_reference.aggregate([
-//   {
-//     $match: { name: 'Eliot'}
-//   },
-//   {
-//     $graphLookup: {
-//       from: 'parent_reference',
-//       startWith: '$_id',
-//       connectFromField: '_id',
-//       connectToField: 'reports_to',
-//       as: 'all_reports'
-//     }
-//   }
-// ])
+db.parent_reference.aggregate([
+  {
+    $match: { name: 'Eliot'}
+  },
+  {
+    $graphLookup: {
+      from: 'parent_reference',
+      startWith: '$_id',
+      connectFromField: '_id',
+      connectToField: 'reports_to',
+      as: 'all_reports'
+    }
+  }
+])
 
-// Lookup bosses (Self lookup)
-// db.parent_reference.aggregate([
-//   {
-//     $match: { name: 'Shannon'}
-//   },
-//   {
-//     $graphLookup: {
-//       from: 'parent_reference',
-//       startWith: '$reports_to',
-//       connectFromField: 'reports_to',
-//       connectToField: '_id',
-//       as: 'bosses'
-//     }
-//   }
-// ])
+Lookup bosses (Self lookup)
+db.parent_reference.aggregate([
+  {
+    $match: { name: 'Shannon'}
+  },
+  {
+    $graphLookup: {
+      from: 'parent_reference',
+      startWith: '$reports_to',
+      connectFromField: 'reports_to',
+      connectToField: '_id',
+      as: 'bosses'
+    }
+  }
+])
 
 // Reverse Schema of parent_reference (Self lookup)
-// db.child_reference.aggregate([
-//   {
-//     $match: { name: 'Dev' }
-//   },
-//   {
-//     $graphLookup: {
-//       from: 'child_reference',
-//       startWith: '$direct_reports',
-//       connectFromField: 'direct_reports',
-//       connectToField: 'name',
-//       as: 'all_reports'
-//     }
-//   }
-// ])
+db.child_reference.aggregate([
+  {
+    $match: { name: 'Dev' }
+  },
+  {
+    $graphLookup: {
+      from: 'child_reference',
+      startWith: '$direct_reports',
+      connectFromField: 'direct_reports',
+      connectToField: 'name',
+      as: 'all_reports'
+    }
+  }
+])
 
 // Specifying maxDepth (Self lookup)
-// db.child_reference.aggregate([
-//   {
-//     $match: { name: 'Dev' }
-//   },
-//   {
-//     $graphLookup: {
-//       from: 'child_reference',
-//       startWith: '$direct_reports',
-//       connectFromField: 'direct_reports',
-//       connectToField: 'name',
-//       as: 'till_2_level_reports',
-//       maxDepth: 1
-//     }
-//   }
-// ])
+db.child_reference.aggregate([
+  {
+    $match: { name: 'Dev' }
+  },
+  {
+    $graphLookup: {
+      from: 'child_reference',
+      startWith: '$direct_reports',
+      connectFromField: 'direct_reports',
+      connectToField: 'name',
+      as: 'till_2_level_reports',
+      maxDepth: 1
+    }
+  }
+])
 
 // Specifying maxDepth and depthField (Self lookup)
-// db.child_reference.aggregate([
-//   {
-//     $match: { name: 'Dev' }
-//   },
-//   {
-//     $graphLookup: {
-//       from: 'child_reference',
-//       startWith: '$direct_reports',
-//       connectFromField: 'direct_reports',
-//       connectToField: 'name',
-//       as: 'descendants',
-//       maxDepth: 1,
-//       depthField: 'level'
-//     }
-//   }
-// ])
+db.child_reference.aggregate([
+  {
+    $match: { name: 'Dev' }
+  },
+  {
+    $graphLookup: {
+      from: 'child_reference',
+      startWith: '$direct_reports',
+      connectFromField: 'direct_reports',
+      connectToField: 'name',
+      as: 'descendants',
+      maxDepth: 1,
+      depthField: 'level'
+    }
+  }
+])
 
 // Lab: $graphLookup
-// db.air_alliances.aggregate([
-//   {
-//     $match: { name: 'OneWorld' }
-//   },
-//   {
-//     /**
-//      * iterates, with maxDepth 0 on the air_airlines collection to collect the
-//      * details on the airlines, specially their base airport, restricting the
-//      * $lookup to airlines of the requested countries [Spain, Germany, Canada]
-//      */
-//     $graphLookup: {
-//       from: 'air_airlines',
-//       startWith: '$airlines',
-//       connectFromField: 'name',
-//       connectToField: 'name',
-//       as: 'airlines',
-//       maxDepth: 0,
-//       restrictSearchWithMatch: {
-//         country: { $in: ["Germany", "Spain", "Canada"] }
-//       }
-//     }
-//   },
-//   {
-//     /**
-//      * iterate over all routes up to maximum of one layover by setting the
-//      * maxDepth to 1. Find all possible destinations when departing from
-//      * the base airport of each carrier.
-//      */
-//     $graphLookup: {
-//       from: 'air_routes',
-//       startWith: '$airlines.base',
-//       connectFromField: 'dst_airport',
-//       connectToField: 'src_airport',
-//       as: 'connections',
-//       maxDepth: 1,
-//     }
-//   },
-//   {
-//     /**
-//      * We now have a document with a field named connections that is an array of
-//      * all routes that are within 1 layover. Remove unnecessary information from
-//      * the documents and include information about valid airlines that match our
-//      * initial restriction and the name of the current airline.
-//      */
-//     $project: {
-//       validAirlines: "$airlines.name",
-//       "connections.dst_airport": 1,
-//       "connections.airline.name": 1
-//     }
-//   },
-//   {
-//     /**
-//      * unwind our connections array
-//      */
-//     $unwind: "$connections"
-//   },
-//   {
-//     /**
-//      * add a field representing whether this particular route is valid
-//      * meaning it is a route flown by one of our desired carriers.
-//      */
-//     $project: {
-//       isValid: {
-//         $in: ["$connections.airline.name", "$validAirlines"]
-//       },
-//       "connections.dst_airport": 1,
-//     }
-//   },
-//   {
-//     /**
-//      * filter out invalid routes
-//      */
-//     $match: { isValid: true }
-//   },
-//   {
-//     /**
-//      * then $group them on the destination
-//      */
-//     $group: {
-//       _id: "$connections.dst_airport"
-//     }
-//   }
-// ])
+db.air_alliances.aggregate([
+  {
+    $match: { name: 'OneWorld' }
+  },
+  {
+    /**
+     * iterates, with maxDepth 0 on the air_airlines collection to collect the
+     * details on the airlines, specially their base airport, restricting the
+     * $lookup to airlines of the requested countries [Spain, Germany, Canada]
+     */
+    $graphLookup: {
+      from: 'air_airlines',
+      startWith: '$airlines',
+      connectFromField: 'name',
+      connectToField: 'name',
+      as: 'airlines',
+      maxDepth: 0,
+      restrictSearchWithMatch: {
+        country: { $in: ["Germany", "Spain", "Canada"] }
+      }
+    }
+  },
+  {
+    /**
+     * iterate over all routes up to maximum of one layover by setting the
+     * maxDepth to 1. Find all possible destinations when departing from
+     * the base airport of each carrier.
+     */
+    $graphLookup: {
+      from: 'air_routes',
+      startWith: '$airlines.base',
+      connectFromField: 'dst_airport',
+      connectToField: 'src_airport',
+      as: 'connections',
+      maxDepth: 1,
+    }
+  },
+  {
+    /**
+     * We now have a document with a field named connections that is an array of
+     * all routes that are within 1 layover. Remove unnecessary information from
+     * the documents and include information about valid airlines that match our
+     * initial restriction and the name of the current airline.
+     */
+    $project: {
+      validAirlines: "$airlines.name",
+      "connections.dst_airport": 1,
+      "connections.airline.name": 1
+    }
+  },
+  {
+    /**
+     * unwind our connections array
+     */
+    $unwind: "$connections"
+  },
+  {
+    /**
+     * add a field representing whether this particular route is valid
+     * meaning it is a route flown by one of our desired carriers.
+     */
+    $project: {
+      isValid: {
+        $in: ["$connections.airline.name", "$validAirlines"]
+      },
+      "connections.dst_airport": 1,
+    }
+  },
+  {
+    /**
+     * filter out invalid routes
+     */
+    $match: { isValid: true }
+  },
+  {
+    /**
+     * then $group them on the destination
+     */
+    $group: {
+      _id: "$connections.dst_airport"
+    }
+  }
+])
 
 
 // Lab - $facets
@@ -449,5 +449,60 @@ db.movies.aggregate([
         $setIntersection: ["$top_metacritic", "$top_imdb"]
       }
     }
+  }
+])
+
+// Final: Question 7
+db.air_routes.aggregate([
+  {
+    /**
+     * Fetch routes that originate or end at either LHR and JFK
+     */
+    $match: {
+      src_airport: { $in: ["LHR", "JFK"] },
+      dst_airport: { $in: ["LHR", "JFK"] }
+    }
+  },
+  {
+    /**
+     * lookup into the air_alliances collection, matching member airline
+     * names in the airlines field to the local airline.name field in the route
+     */
+    $lookup: {
+      from: 'air_alliances',
+      localField: 'airline.name',
+      foreignField: 'airlines',
+      as: 'alliance'
+    }
+  },
+  {
+    /**
+     * remove routes that are not members of an alliance
+     */
+    $match: { alliance: { $ne: [] } }
+  },
+  {
+    /**
+     * cast just the name of the alliance and extract a single element in one go
+     */
+    $addFields: {
+      alliance: { $arrayElemAt: ["$alliance.name", 0] }
+    }
+  },
+  {
+    /**
+     * $group on the airline.id, since we don't want to count the same airline twice
+     * We take the $first alliance name to avoid duplicates.
+     */
+    $group: {
+      _id: "$airline.id",
+      alliance: { $first: "$alliance" }
+    }
+  },
+  {
+    /**
+     * use $sortByCount to get our answer from the results
+     */
+    $sortByCount: "$alliance"
   }
 ])
