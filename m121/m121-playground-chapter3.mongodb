@@ -220,7 +220,7 @@ db.parent_reference.aggregate([
   }
 ])
 
-Lookup bosses (Self lookup)
+// Lookup bosses (Self lookup)
 db.parent_reference.aggregate([
   {
     $match: { name: 'Shannon'}
